@@ -6,23 +6,38 @@
 #include <ctime>
 #include <chrono>
 #include <random>
-#include <thread> // Para utilizar this_thread::sleep_for
-#include <set>   
+#include <thread>
+#include <set>
+#include <cctype> // Para usar tolower
 
 using namespace std;
+
+// Función para convertir una letra a minúsculas
+char convertirMinuscula(char letra) {
+    return tolower(letra);
+}
+
+// Función para convertir una palabra a minúsculas
+vector<char> convertirMinusculas(const vector<char>& palabra) {
+    vector<char> palabra_minusculas;
+    for (char letra : palabra) {
+        palabra_minusculas.push_back(convertirMinuscula(letra));
+    }
+    return palabra_minusculas;
+}
 
 // Definiciones de las palabras
 map<string, pair<string, vector<char>>> obtenerDefiniciones() {
     map<string, pair<string, vector<char>>> definiciones = {
-        {"Balon", {"Pelota inflable utilizada en deportes.", {'b', 'a', 'l', 'o', 'n'}}},
-        {"Porteria", {"Arco donde se marca gol.", {'p', 'o', 'r', 't', 'e', 'r', 'i', 'a'}}},
-        {"Futbol", {"Deporte con balón y dos equipos.", {'f', 'u', 't', 'b', 'o', 'l'}}},
-        {"Canasta", {"Aro donde se encesta en baloncesto.", {'c', 'a', 'n', 'a', 's', 't', 'a'}}},
-        {"Puntos", {"Se suman al marcar en deportes.", {'p', 'u', 'n', 't', 'o', 's'}}},
-        {"Raqueta", {"Instrumento para golpear en tenis.", {'r', 'a', 'q', 'u', 'e', 't', 'a'}}},
-        {"Juego", {"Actividad de entretenimiento.", {'j', 'u', 'e', 'g', 'o'}}},
-        {"Baloncesto", {"Deporte con canasta y balón.", {'b', 'a', 'l', 'o', 'n', 'c', 'e', 's', 't', 'o'}}},
-        {"Equipo", {"Grupo que compite junto en deportes.", {'e', 'q', 'u', 'i', 'p', 'o'}}}
+        {"Balon", {"Pelota inflable utilizada en deportes.", convertirMinusculas({'B', 'a', 'l', 'o', 'n'})}},
+        {"Porteria", {"Arco donde se marca gol.", convertirMinusculas({'P', 'o', 'r', 't', 'e', 'r', 'i', 'a'})}},
+        {"Futbol", {"Deporte con balón y dos equipos.", convertirMinusculas({'F', 'u', 't', 'b', 'o', 'l'})}},
+        {"Canasta", {"Aro donde se encesta en baloncesto.", convertirMinusculas({'C', 'a', 'n', 'a', 's', 't', 'a'})}},
+        {"Puntos", {"Se suman al marcar en deportes.", convertirMinusculas({'P', 'u', 'n', 't', 'o', 's'})}},
+        {"Raqueta", {"Instrumento para golpear en tenis.", convertirMinusculas({'R', 'a', 'q', 'u', 'e', 't', 'a'})}},
+        {"Juego", {"Actividad de entretenimiento.", convertirMinusculas({'J', 'u', 'e', 'g', 'o'})}},
+        {"Baloncesto", {"Deporte con canasta y balón.", convertirMinusculas({'B', 'a', 'l', 'o', 'n', 'c', 'e', 's', 't', 'o'})}},
+        {"Equipo", {"Grupo que compite junto en deportes.", convertirMinusculas({'E', 'q', 'u', 'i', 'p', 'o'})}}
     };
     return definiciones;
 }
@@ -62,6 +77,7 @@ char pedirLetra(const string& jugador, set<char>& letras_ingresadas) {
     do {
         cout << jugador << ", ingresa una letra: ";
         cin >> letra;
+        letra = convertirMinuscula(letra);
         if (letras_ingresadas.count(letra) > 0) {
             cout << "Esa letra ya ha sido ingresada. Por favor, intenta con otra." << endl;
             letra_repetida = true;
