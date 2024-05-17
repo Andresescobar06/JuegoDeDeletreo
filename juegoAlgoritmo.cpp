@@ -41,10 +41,9 @@ void mostrarPalabra(const vector<char>& letras_adivinadas) {
         cout << letra << " ";
     }
     cout << endl;
-    
 }
 
-// procedimiento pista
+// Procedimiento para dar una pista
 void pista(const pair<string, pair<string, vector<char>>>& definicion, int& puntos_jugador) {
     cout << "Pista: La palabra tiene " << definicion.second.second.size() << " letras." << endl;
     this_thread::sleep_for(chrono::milliseconds(500));
@@ -61,7 +60,7 @@ char pedirLetra(const string& jugador, set<char>& letras_ingresadas) {
     char letra;
     bool letra_repetida;
     do {
-        cout << jugador << ", Ingresa una letra: ";
+        cout << jugador << ", ingresa una letra: ";
         cin >> letra;
         if (letras_ingresadas.count(letra) > 0) {
             cout << "Esa letra ya ha sido ingresada. Por favor, intenta con otra." << endl;
@@ -74,74 +73,98 @@ char pedirLetra(const string& jugador, set<char>& letras_ingresadas) {
     return letra;
 }
 
+// Función para mostrar los puntajes actuales
+void mostrarPuntajes(const string& jugador1, const string& jugador2, int puntos_jugador1, int puntos_jugador2) {
+    cout << "Puntajes actuales:" << endl;
+    this_thread::sleep_for(chrono::milliseconds(500));
+    cout << jugador1 << " Jugador 1: " << puntos_jugador1 << " puntos." << endl;
+    this_thread::sleep_for(chrono::milliseconds(500));
+    cout << jugador2 << " Jugador 2: " << puntos_jugador2 << " puntos." << endl;
+    this_thread::sleep_for(chrono::milliseconds(500));
+}
+
 // Función para manejar el turno de un jugador
-bool manejarTurnoJugador(const pair<string, pair<string, vector<char>>>& definicion, int& puntos_jugador, int& perdidas_jugador, const string& jugador, set<char>& letras_ingresadas) {
-    vector<char> letras_adivinadas(definicion.second.second.size(), '_');
-    
-    while (perdidas_jugador < 3 && puntos_jugador > 0 && !verificarPalabraCompletada(letras_adivinadas)) {
+bool manejarTurnoJugador(const pair<string, pair<string, vector<char>>>& definicion, int& puntos_jugador, int& perdidas_jugador, const string& jugador, set<char>& letras_ingresadas, vector<char>& letras_adivinadas, const string& jugador1, const string& jugador2, int puntos_jugador1, int puntos_jugador2) {
+    bool letra_correcta = false;
+    while (true) {
         cout << "Definición: " << definicion.second.first << endl;
         mostrarPalabra(letras_adivinadas);
         this_thread::sleep_for(chrono::milliseconds(500));
-        char respuesta;
-        cout << "¿Deseas una pista? (Sí = 's', No = 'n' o 'f' para salir): ";
-        cin >> respuesta;
-        this_thread::sleep_for(chrono::milliseconds(500));
-        if (respuesta == 's' || respuesta == 'S') {
-            pista(definicion, puntos_jugador);
-        } 
-        if (respuesta == 'f' || respuesta == 'F') {
-            cout << "Juego finalizado por el jugador " << jugador << "." << endl;
-            this_thread::sleep_for(chrono::milliseconds(500));
-            return true;
-        }
-        
-        // Pedir la letra
-        char letra_jugador = pedirLetra(jugador, letras_ingresadas);
 
-        bool letra_correcta = false;
-        for (size_t i = 0; i < definicion.second.second.size(); ++i) {
-            if (definicion.second.second[i] == letra_jugador) {
-                letras_adivinadas[i] = letra_jugador;
-                letra_correcta = true;
+        // Pedir la opción
+        cout << jugador << ", elige una opción:" << endl;
+        cout << "1. Ingresar una letra" << endl;
+        cout << "2. Pedir una pista (-2 puntos)" << endl;
+        cout << "3. Salir del juego" << endl;
+        int opcion;
+        cin >> opcion;
+
+        if (opcion == 1) {
+            // Pedir la letra
+            char letra_jugador = pedirLetra(jugador, letras_ingresadas);
+
+            letra_correcta = false;
+            for (size_t i = 0; i < definicion.second.second.size(); ++i) {
+                if (definicion.second.second[i] == letra_jugador) {
+                    letras_adivinadas[i] = letra_jugador;
+                    letra_correcta = true;
+                }
             }
-        }
 
-        if (letra_correcta) {
-            cout << "¡Letra correcta! " << jugador << " suma 5 puntos." << endl;
-            this_thread::sleep_for(chrono::milliseconds(500));
-            puntos_jugador += 5;
-            chrono::steady_clock::time_point start = chrono::steady_clock::now();
-            // ... Código para medir el tiempo de respuesta ...
-
-            chrono::steady_clock::time_point end = chrono::steady_clock::now();
-            double tiempo = chrono::duration_cast<chrono::seconds>(end - start).count();
-
-            if (tiempo <= 5) {
-                puntos_jugador++;
-                cout << "¡Bonus por rapidez! Sumas un punto adicional. :D" << endl;
+            if (letra_correcta) {
+                cout << "¡Letra correcta! " << jugador << " suma 5 puntos." << endl;
                 this_thread::sleep_for(chrono::milliseconds(500));
-            }
+                puntos_jugador += 5;
+                chrono::steady_clock::time_point start = chrono::steady_clock::now();
+                // ... Código para medir el tiempo de respuesta ...
 
-        } else {
-            cout << "Letra incorrecta." << endl;
+                chrono::steady_clock::time_point end = chrono::steady_clock::now();
+                double tiempo = chrono::duration_cast<chrono::seconds>(end - start).count();
+
+                if (tiempo <= 5) {
+                    puntos_jugador++;
+                    cout << "¡Bonus por rapidez! Sumas un punto adicional. :D" << endl;
+                    this_thread::sleep_for(chrono::milliseconds(500));
+                }
+            } else {
+                cout << "Letra incorrecta." << endl;
+                this_thread::sleep_for(chrono::milliseconds(500));
+                puntos_jugador -= 2;
+                perdidas_jugador++;
+            }
+            break;
+        } else if (opcion == 2) {
+            pista(definicion, puntos_jugador);
+        } else if (opcion == 3) {
+            cout << jugador << " ha decidido salir del juego." << endl;
             this_thread::sleep_for(chrono::milliseconds(500));
-            puntos_jugador -= 2;
+            mostrarPuntajes(jugador1, jugador2, puntos_jugador1, puntos_jugador2);
+            if (puntos_jugador1 > puntos_jugador2) {
+                cout << jugador1 << " Jugador 1 va ganando." << endl;
+            } else if (puntos_jugador1 < puntos_jugador2) {
+                cout << jugador2 << " Jugador 2 va ganando." << endl;
+            } else {
+                cout << "¡Empate!" << endl;
+            }
+            exit(0);
+        } else {
+            cout << "Opción inválida. Pierdes el turno." << endl;
+            this_thread::sleep_for(chrono::milliseconds(500));
             perdidas_jugador++;
+            break;
+        }
+
+        // Verificar si la palabra está completa después de cada opción
+        if (verificarPalabraCompletada(letras_adivinadas)) {
+            cout << "¡Palabra completada por " << jugador << "!" << endl;
+            break;
         }
     }
 
-    if (perdidas_jugador >= 3 || puntos_jugador <= 0) {
-        cout << "El jugador " << jugador << " ha perdido :(" << endl;
-        this_thread::sleep_for(chrono::milliseconds(500));
-    } else {
-        cout << "¡Palabra completada por " << jugador << "!" << endl;
-        this_thread::sleep_for(chrono::milliseconds(500));
-    }
-
-    return false;
+    return letra_correcta;
 }
 
-// Nueva procedimiento para salir del juego y mostrar resultados
+// Procedimiento para salir del juego y mostrar resultados
 void salirDelJuego(const string& jugador1, const string& jugador2, int puntos_jugador1, int puntos_jugador2) {
     cout << "Resultados finales:" << endl;
     this_thread::sleep_for(chrono::milliseconds(500));
@@ -154,17 +177,17 @@ void salirDelJuego(const string& jugador1, const string& jugador2, int puntos_ju
         cout << jugador1 << " Jugador 1 ha ganado :)" << endl;
         this_thread::sleep_for(chrono::milliseconds(500));
     } else if (puntos_jugador1 < puntos_jugador2) {
-        this_thread::sleep_for(chrono::milliseconds(500));
         cout << jugador2 << " Jugador 2 ha ganado :)" << endl;
-    } else {
         this_thread::sleep_for(chrono::milliseconds(500));
+    } else {
         cout << "¡Empate!" << endl;
+        this_thread::sleep_for(chrono::milliseconds(500));
     }
 
     exit(0);  // Salir del programa
 }
 
-// procedimiento principal para jugar
+// Procedimiento principal para jugar
 void jugar(const vector<pair<string, pair<string, vector<char>>>>& definiciones_vec, const string& jugador1, const string& jugador2) {
     int puntos_jugador1 = 5, puntos_jugador2 = 5, perdidas_jugador1 = 0, perdidas_jugador2 = 0;
     set<char> letras_ingresadas_jugador1, letras_ingresadas_jugador2;
@@ -172,35 +195,41 @@ void jugar(const vector<pair<string, pair<string, vector<char>>>>& definiciones_
     bool jugador1_turno = true; // Variable para controlar el turno de los jugadores
 
     for (const auto& definicion : definiciones_vec) {
-        if (jugador1_turno) {
-            cout << "Turno del jugador " << jugador1 << ":" << endl;
-            this_thread::sleep_for(chrono::milliseconds(500));
-            if (manejarTurnoJugador(definicion, puntos_jugador1, perdidas_jugador1, jugador1, letras_ingresadas_jugador1)) {
-                salirDelJuego(jugador1, jugador2, puntos_jugador1, puntos_jugador2);
-            }
-            if (verificarPalabraCompletada(definicion.second.second)) {
-                cout << "Palabra completada por " << jugador1 << ", cambiando al siguiente jugador." << endl;
+        vector<char> letras_adivinadas(definicion.second.second.size(), '_');
+
+        while (perdidas_jugador1 < 3 && puntos_jugador1 > 0 && perdidas_jugador2 < 3 && puntos_jugador2 > 0 && !verificarPalabraCompletada(letras_adivinadas)) {
+            if (jugador1_turno) {
+                cout << "Turno del jugador " << jugador1 << ":" << endl;
                 this_thread::sleep_for(chrono::milliseconds(500));
+                if (manejarTurnoJugador(definicion, puntos_jugador1, perdidas_jugador1, jugador1, letras_ingresadas_jugador1, letras_adivinadas, jugador1, jugador2, puntos_jugador1, puntos_jugador2)) {
+                    if (verificarPalabraCompletada(letras_adivinadas)) {
+                        break;
+                    }
+                }
                 jugador1_turno = false;
-            }
-        } else {
-            cout << "Turno del jugador " << jugador2 << ":" << endl;
-            this_thread::sleep_for(chrono::milliseconds(500));
-            if (manejarTurnoJugador(definicion, puntos_jugador2, perdidas_jugador2, jugador2, letras_ingresadas_jugador2)) {
-                salirDelJuego(jugador1, jugador2, puntos_jugador1, puntos_jugador2);
-            }
-            if (verificarPalabraCompletada(definicion.second.second)) {
-                cout << "Palabra completada por " << jugador2 << ", cambiando al siguiente jugador." << endl;
+            } else {
+                cout << "Turno del jugador " << jugador2 << ":" << endl;
                 this_thread::sleep_for(chrono::milliseconds(500));
+                if (manejarTurnoJugador(definicion, puntos_jugador2, perdidas_jugador2, jugador2, letras_ingresadas_jugador2, letras_adivinadas, jugador1, jugador2, puntos_jugador1, puntos_jugador2)) {
+                    if (verificarPalabraCompletada(letras_adivinadas)) {
+                        break;
+                    }
+                }
                 jugador1_turno = true;
+            }
+
+            // Verificar condiciones de fin de juego aquí
+            if (perdidas_jugador1 >= 3 || puntos_jugador1 <= 0 || perdidas_jugador2 >= 3 || puntos_jugador2 <= 0) {
+                this_thread::sleep_for(chrono::milliseconds(500));
+                cout << "Juego terminado debido a que al menos un jugador ha perdido." << endl;
+                salirDelJuego(jugador1, jugador2, puntos_jugador1, puntos_jugador2);
             }
         }
 
-        // Verificar condiciones de fin de juego aquí
-        if (perdidas_jugador1 >= 3 || puntos_jugador1 <= 0 || perdidas_jugador2 >= 3 || puntos_jugador2 <= 0) {
+        // Si la palabra se completó, continuar con la siguiente palabra
+        if (verificarPalabraCompletada(letras_adivinadas)) {
+            cout << "Palabra completada, cambiando al siguiente turno." << endl;
             this_thread::sleep_for(chrono::milliseconds(500));
-            cout << "Juego terminado debido a que al menos un jugador ha perdido." << endl;
-            salirDelJuego(jugador1, jugador2, puntos_jugador1, puntos_jugador2);
         }
     }
 
@@ -211,9 +240,9 @@ int main() {
     cout << "**************************************" << endl;
     this_thread::sleep_for(chrono::milliseconds(500)); // Pausa de 500 milisegundos (0.5 segundos)
     cout << "*BIENVENIDO A DELETREA LA PALABRA ***" << endl;
-    this_thread::sleep_for(chrono::milliseconds(500)); 
+    this_thread::sleep_for(chrono::milliseconds(500));
     cout << "**************************************" << endl;
-    this_thread::sleep_for(chrono::milliseconds(1000)); 
+    this_thread::sleep_for(chrono::milliseconds(1000));
     // Inicialización
     string jugador1, jugador2;
     cout << "Ingrese el nombre del Jugador 1: ";
