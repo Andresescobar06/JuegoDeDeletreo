@@ -9,6 +9,7 @@
 #include <thread>
 #include <set>
 #include <cctype> // Para usar tolower
+#include <future>
 
 using namespace std;
 
@@ -70,14 +71,30 @@ bool verificarPalabraCompletada(const vector<char>& letras_adivinadas) {
     return find(letras_adivinadas.begin(), letras_adivinadas.end(), '_') == letras_adivinadas.end();
 }
 
-// Función para solicitar una letra al jugador
+// Función para solicitar una letra al jugador con límite de tiempo
 char pedirLetra(const string& jugador, set<char>& letras_ingresadas) {
     char letra;
     bool letra_repetida;
+
     do {
-        cout << jugador << ", ingresa una letra: ";
-        cin >> letra;
+        cout << jugador << ", ingresa una letra (tienes 10 segundos): ";
+        
+        // Configurar un futuro para obtener la letra con un límite de tiempo
+        future<char> f = async(launch::async, []() {
+            char letra;
+            cin >> letra;
+            return letra;
+        });
+
+        // Esperar hasta 10 segundos por la entrada
+        if (f.wait_for(chrono::seconds(10)) == future_status::timeout) {
+            cout << "¡Tiempo agotado!" << endl;
+            return ' ';
+        }
+
+        letra = f.get();
         letra = convertirMinuscula(letra);
+
         if (letras_ingresadas.count(letra) > 0) {
             cout << "Esa letra ya ha sido ingresada. Por favor, intenta con otra." << endl;
             letra_repetida = true;
@@ -86,6 +103,7 @@ char pedirLetra(const string& jugador, set<char>& letras_ingresadas) {
             letra_repetida = false;
         }
     } while (letra_repetida);
+
     return letra;
 }
 
@@ -116,8 +134,20 @@ bool manejarTurnoJugador(const pair<string, pair<string, vector<char>>>& definic
         cin >> opcion;
 
         if (opcion == 1) {
+            auto start = chrono::steady_clock::now();
+
             // Pedir la letra
             char letra_jugador = pedirLetra(jugador, letras_ingresadas);
+
+            auto end = chrono::steady_clock::now();
+            chrono::duration<double> tiempo_transcurrido = end - start;
+
+            if (letra_jugador == ' ') {
+                cout << "Perdiste tu turno por no ingresar una letra a tiempo." << endl;
+                this_thread::sleep_for(chrono::milliseconds(500));
+                perdidas_jugador++;
+                break;
+            }
 
             letra_correcta = false;
             for (size_t i = 0; i < definicion.second.second.size(); ++i) {
@@ -131,13 +161,8 @@ bool manejarTurnoJugador(const pair<string, pair<string, vector<char>>>& definic
                 cout << "¡Letra correcta! " << jugador << " suma 5 puntos." << endl;
                 this_thread::sleep_for(chrono::milliseconds(500));
                 puntos_jugador += 5;
-                chrono::steady_clock::time_point start = chrono::steady_clock::now();
-                // ... Código para medir el tiempo de respuesta ...
 
-                chrono::steady_clock::time_point end = chrono::steady_clock::now();
-                double tiempo = chrono::duration_cast<chrono::seconds>(end - start).count();
-
-                if (tiempo <= 5) {
+                if (tiempo_transcurrido.count() <= 5) {
                     puntos_jugador++;
                     cout << "¡Bonus por rapidez! Sumas un punto adicional. :D" << endl;
                     this_thread::sleep_for(chrono::milliseconds(500));
@@ -160,19 +185,13 @@ bool manejarTurnoJugador(const pair<string, pair<string, vector<char>>>& definic
             } else if (puntos_jugador1 < puntos_jugador2) {
                 cout << jugador2 << " Jugador 2 va ganando." << endl;
             } else {
-                cout << "¡Empate!" << endl;
+                cout << "Empate hasta ahora." << endl;
             }
             exit(0);
         } else {
-            cout << "Opción inválida. Pierdes el turno." << endl;
+            cout << "Opción no válida. Intenta de nuevo." << endl;
             this_thread::sleep_for(chrono::milliseconds(500));
             perdidas_jugador++;
-            break;
-        }
-
-        // Verificar si la palabra está completa después de cada opción
-        if (verificarPalabraCompletada(letras_adivinadas)) {
-            cout << "¡Palabra completada por " << jugador << "!" << endl;
             break;
         }
     }
@@ -180,99 +199,72 @@ bool manejarTurnoJugador(const pair<string, pair<string, vector<char>>>& definic
     return letra_correcta;
 }
 
-// Procedimiento para salir del juego y mostrar resultados
-void salirDelJuego(const string& jugador1, const string& jugador2, int puntos_jugador1, int puntos_jugador2) {
-    cout << "Resultados finales:" << endl;
-    this_thread::sleep_for(chrono::milliseconds(500));
-    cout << jugador1 << " Jugador 1: " << puntos_jugador1 << " puntos." << endl;
-    this_thread::sleep_for(chrono::milliseconds(500));
-    cout << jugador2 << " Jugador 2: " << puntos_jugador2 << " puntos." << endl;
-    this_thread::sleep_for(chrono::milliseconds(500));
-
-    if (puntos_jugador1 > puntos_jugador2) {
-        cout << jugador1 << " Jugador 1 ha ganado :)" << endl;
-        this_thread::sleep_for(chrono::milliseconds(500));
-    } else if (puntos_jugador1 < puntos_jugador2) {
-        cout << jugador2 << " Jugador 2 ha ganado :)" << endl;
-        this_thread::sleep_for(chrono::milliseconds(500));
-    } else {
-        cout << "¡Empate!" << endl;
-        this_thread::sleep_for(chrono::milliseconds(500));
-    }
-
-    exit(0);  // Salir del programa
-}
-
-// Procedimiento principal para jugar
-void jugar(const vector<pair<string, pair<string, vector<char>>>>& definiciones_vec, const string& jugador1, const string& jugador2) {
-    int puntos_jugador1 = 5, puntos_jugador2 = 5, perdidas_jugador1 = 0, perdidas_jugador2 = 0;
-    set<char> letras_ingresadas_jugador1, letras_ingresadas_jugador2;
-
-    bool jugador1_turno = true; // Variable para controlar el turno de los jugadores
-
-    for (const auto& definicion : definiciones_vec) {
-        vector<char> letras_adivinadas(definicion.second.second.size(), '_');
-
-        while (perdidas_jugador1 < 3 && puntos_jugador1 > 0 && perdidas_jugador2 < 3 && puntos_jugador2 > 0 && !verificarPalabraCompletada(letras_adivinadas)) {
-            if (jugador1_turno) {
-                cout << "Turno del jugador " << jugador1 << ":" << endl;
-                this_thread::sleep_for(chrono::milliseconds(500));
-                if (manejarTurnoJugador(definicion, puntos_jugador1, perdidas_jugador1, jugador1, letras_ingresadas_jugador1, letras_adivinadas, jugador1, jugador2, puntos_jugador1, puntos_jugador2)) {
-                    if (verificarPalabraCompletada(letras_adivinadas)) {
-                        break;
-                    }
-                }
-                jugador1_turno = false;
-            } else {
-                cout << "Turno del jugador " << jugador2 << ":" << endl;
-                this_thread::sleep_for(chrono::milliseconds(500));
-                if (manejarTurnoJugador(definicion, puntos_jugador2, perdidas_jugador2, jugador2, letras_ingresadas_jugador2, letras_adivinadas, jugador1, jugador2, puntos_jugador1, puntos_jugador2)) {
-                    if (verificarPalabraCompletada(letras_adivinadas)) {
-                        break;
-                    }
-                }
-                jugador1_turno = true;
-            }
-
-            // Verificar condiciones de fin de juego aquí
-            if (perdidas_jugador1 >= 3 || puntos_jugador1 <= 0 || perdidas_jugador2 >= 3 || puntos_jugador2 <= 0) {
-                this_thread::sleep_for(chrono::milliseconds(500));
-                cout << "Juego terminado debido a que al menos un jugador ha perdido." << endl;
-                salirDelJuego(jugador1, jugador2, puntos_jugador1, puntos_jugador2);
-            }
-        }
-
-        // Si la palabra se completó, continuar con la siguiente palabra
-        if (verificarPalabraCompletada(letras_adivinadas)) {
-            cout << "Palabra completada, cambiando al siguiente turno." << endl;
-            this_thread::sleep_for(chrono::milliseconds(500));
-        }
-    }
-
-    salirDelJuego(jugador1, jugador2, puntos_jugador1, puntos_jugador2);
-}
-
-int main() {
-    cout << "**************************************" << endl;
-    this_thread::sleep_for(chrono::milliseconds(500)); // Pausa de 500 milisegundos (0.5 segundos)
-    cout << "*BIENVENIDO A DELETREA LA PALABRA ***" << endl;
-    this_thread::sleep_for(chrono::milliseconds(500));
-    cout << "**************************************" << endl;
-    this_thread::sleep_for(chrono::milliseconds(1000));
-    // Inicialización
+// Función principal del juego
+void jugar() {
     string jugador1, jugador2;
-    cout << "Ingrese el nombre del Jugador 1: ";
+    int puntos_jugador1 = 0, puntos_jugador2 = 0;
+    int perdidas_jugador1 = 0, perdidas_jugador2 = 0;
+
+    cout << "¡Bienvenidos al juego de palabras!" << endl;
+    cout << "Jugador 1, ingresa tu nombre: ";
     cin >> jugador1;
-    this_thread::sleep_for(chrono::milliseconds(500));
-    cout << "Ingrese el nombre del Jugador 2: ";
+    cout << "Jugador 2, ingresa tu nombre: ";
     cin >> jugador2;
-    this_thread::sleep_for(chrono::milliseconds(500));
 
+    // Obtener y barajar las definiciones
     map<string, pair<string, vector<char>>> definiciones = obtenerDefiniciones();
-    vector<pair<string, pair<string, vector<char>>>> definiciones_vec = barajarDefiniciones(definiciones);
+    vector<pair<string, pair<string, vector<char>>>> definiciones_barajadas = barajarDefiniciones(definiciones);
 
-    // Juego
-    jugar(definiciones_vec, jugador1, jugador2);
+    // Juego principal
+    for (const auto& definicion : definiciones_barajadas) {
+        vector<char> letras_adivinadas(definicion.second.second.size(), '_');
+        set<char> letras_ingresadas;
 
+        while (!verificarPalabraCompletada(letras_adivinadas)) {
+            if (perdidas_jugador1 < 3) {
+                cout << "Turno de " << jugador1 << ":" << endl;
+                bool acierto_jugador1 = manejarTurnoJugador(definicion, puntos_jugador1, perdidas_jugador1, jugador1, letras_ingresadas, letras_adivinadas, jugador1, jugador2, puntos_jugador1, puntos_jugador2);
+                if (acierto_jugador1 && verificarPalabraCompletada(letras_adivinadas)) {
+                    cout << jugador1 << " ha completado la palabra y obtiene 10 puntos adicionales!" << endl;
+                    puntos_jugador1 += 10;
+                }
+            } else {
+                cout << jugador1 << " ha perdido el turno por 3 letras incorrectas." << endl;
+                this_thread::sleep_for(chrono::milliseconds(500));
+            }
+
+            if (verificarPalabraCompletada(letras_adivinadas)) break;
+
+            if (perdidas_jugador2 < 3) {
+                cout << "Turno de " << jugador2 << ":" << endl;
+                bool acierto_jugador2 = manejarTurnoJugador(definicion, puntos_jugador2, perdidas_jugador2, jugador2, letras_ingresadas, letras_adivinadas, jugador1, jugador2, puntos_jugador1, puntos_jugador2);
+                if (acierto_jugador2 && verificarPalabraCompletada(letras_adivinadas)) {
+                    cout << jugador2 << " ha completado la palabra y obtiene 10 puntos adicionales!" << endl;
+                    puntos_jugador2 += 10;
+                }
+            } else {
+                cout << jugador2 << " ha perdido el turno por 3 letras incorrectas." << endl;
+                this_thread::sleep_for(chrono::milliseconds(500));
+            }
+        }
+
+        cout << "La palabra era: " << definicion.first << endl;
+        this_thread::sleep_for(chrono::milliseconds(500));
+        mostrarPuntajes(jugador1, jugador2, puntos_jugador1, puntos_jugador2);
+    }
+
+    // Mostrar el ganador final
+    if (puntos_jugador1 > puntos_jugador2) {
+        cout << "¡" << jugador1 << " es el ganador con " << puntos_jugador1 << " puntos!" << endl;
+    } else if (puntos_jugador2 > puntos_jugador1) {
+        cout << "¡" << jugador2 << " es el ganador con " << puntos_jugador2 << " puntos!" << endl;
+    } else {
+        cout << "¡Empate con " << puntos_jugador1 << " puntos cada uno!" << endl;
+    }
+}
+
+// Función principal
+int main() {
+    jugar();
     return 0;
 }
