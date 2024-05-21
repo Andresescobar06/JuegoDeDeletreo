@@ -1,9 +1,0 @@
-Balon-Pelota inflable utilizada en deportes.
-Porteria-Arco donde se marca gol.
-Futbol-Deporte con balón y dos equipos.
-Canasta-Aro donde se encesta en baloncesto.
-Puntos-Se suman al marcar en deportes.
-Raqueta-Instrumento para golpear en tenis.
-Juego-Actividad de entretenimiento.
-Baloncesto-Deporte con canasta y balón.
-Equipo-Grupo que compite junto en deportes.
